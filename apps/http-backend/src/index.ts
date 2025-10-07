@@ -8,7 +8,7 @@ import {
   SigninSchema,
 } from "@repo/common/types";
 import { prismaClient } from "@repo/db/client";
-
+import bcrypt from "bcrypt";
 const app = express();
 
 app.use(express.json());
@@ -21,12 +21,12 @@ app.post("/signup", async (req, res) => {
     });
     return;
   }
+  const hashedPassword = await bcrypt.hash(parsedData.data.password, 10);
   try {
     const user = await prismaClient.user.create({
       data: {
         email: parsedData.data?.username,
-        // hash the pw
-        password: parsedData.data?.password,
+        password: hashedPassword,
         name: parsedData.data?.name,
       },
     });
@@ -53,7 +53,6 @@ app.post("/signin", async (req, res) => {
   const user = await prismaClient.user.findFirst({
     where: {
       email: parsedData.data.username,
-      password: parsedData.data.password,
     },
   });
 
@@ -63,7 +62,11 @@ app.post("/signin", async (req, res) => {
     });
     return;
   }
-
+  const match = await bcrypt.compare(parsedData.data.password, user?.password);
+  if(!match){
+    res.status(403).json({message:"Incorrect inputs"})
+    return;
+  }
   const token = jwt.sign(
     {
       userId: user?.id,
@@ -100,8 +103,8 @@ app.post("/room", middleware, async (req, res) => {
     });
   } catch (e) {
     res.status(411).json({
-      message: "Room already exists with this name"
-    })
+      message: "Room already exists with this name",
+    });
   }
 });
 
