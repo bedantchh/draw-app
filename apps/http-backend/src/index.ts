@@ -63,8 +63,8 @@ app.post("/signin", async (req, res) => {
     return;
   }
   const match = await bcrypt.compare(parsedData.data.password, user?.password);
-  if(!match){
-    res.status(403).json({message:"Incorrect inputs"})
+  if (!match) {
+    res.status(403).json({ message: "Incorrect inputs" });
     return;
   }
   const token = jwt.sign(
@@ -108,21 +108,42 @@ app.post("/room", middleware, async (req, res) => {
   }
 });
 
-app.get("/chats/:roomId",async(req,res)=>{
-  const roomId = Number(req.params.roomId);
-  const messages = await prismaClient.chat.findMany({
-    where:{
-      roomId:roomId
+app.get("/room/:slug", async (req, res) => {
+  const slug = req.params.slug;
+  const room = await prismaClient.room.findFirst({
+    where: {
+      slug,
     },
-    orderBy:{
-      id: "desc"
-    },
-    take: 50
-  })
+  });
 
   res.json({
-    messages
-  })
-})
+    room,
+  });
+});
+
+app.get("/chats/:roomId", async (req, res) => {
+  try {
+    const roomId = Number(req.params.roomId);
+    console.log(roomId)
+    const messages = await prismaClient.chat.findMany({
+      where: {
+        roomId: roomId,
+      },
+      orderBy: {
+        id: "desc",
+      },
+      take: 50,
+    });
+    console.log(`hi ${messages}`);
+    res.json({
+      messages,
+    });
+    // res.json({message:"ok"})
+  } catch (e) {
+    res.json({
+      message: "internal error1",
+    });
+  }
+});
 
 app.listen(3001);
